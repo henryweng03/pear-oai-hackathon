@@ -1,8 +1,10 @@
 import IconButton from "@/components/IconButton";
 import VoiceConversationActionButton from "@/components/VoiceConversationActionButton";
+import useStreamAudioRecording from "@/hooks/useAudioStreamRecording";
+import { Audio } from "expo-av";
 import { useRouter } from "expo-router";
 import { Flag, X } from "lucide-react-native";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Text, View, SafeAreaView } from "react-native";
 
 export type ConversationState =
@@ -25,12 +27,45 @@ export default function ConversationScreen() {
   const isUserTurn = conversationState === "user_speaking";
   const actionButtonVariant = isUserTurn ? "send" : "interrupt";
 
-  const handleActionButtonPress = useCallback(async () => {
+  const onRecordingStatusUpdate = useCallback(
+    (status: Audio.RecordingStatus) => {},
+    []
+  );
+
+  const sendMessageToServer = useCallback((data: ArrayBuffer) => {
+    // @Anthony TODO: Send the data to the server
+  }, []);
+
+  const {
+    startStreamingRecording,
+    stopStreamingRecording,
+    sendRemainingRecordingData,
+  } = useStreamAudioRecording({
+    onRecordingStatusUpdate,
+    streamIntervalMs: 300,
+    updateIntervalMs: 24,
+    sendMessage: (data: ArrayBuffer) => sendMessageToServer(data), // called every 24 ms
+  });
+
+  useEffect(() => {
+    if (conversationState === "user_speaking") {
+      startStreamingRecording();
+    } else {
+      sendRemainingRecordingData();
+      stopStreamingRecording();
+    }
+  }, [conversationState]);
+
+  const updateConversationState = () => {
     if (conversationState === "user_speaking") {
       setConversationState("ai_processing");
     } else {
       setConversationState("user_speaking");
     }
+  };
+
+  const handleActionButtonPress = useCallback(async () => {
+    updateConversationState();
   }, [conversationState]);
 
   return (
