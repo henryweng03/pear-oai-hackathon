@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { Text, View, SafeAreaView, Pressable } from "react-native";
+import { Text, View, SafeAreaView, Pressable, ScrollView } from "react-native";
 import { Plus } from "lucide-react-native";
 import { cn } from "@/lib/utils";
 import Animated, {
@@ -10,6 +10,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { Colors } from "@/constants/Colors";
 import { router } from "expo-router";
+import { styled } from "nativewind";
+import { LinearGradient } from "expo-linear-gradient";
+import { useButtonTransition } from "@/hooks/useButtonTransition";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -82,6 +85,56 @@ const LetsChatButton = ({ onPress }: { onPress: () => void }) => {
   );
 };
 
+const StyledPressable = styled(Animated.View);
+const StyledText = styled(Text);
+
+const SessionPreviewButton = ({
+  sessionNumber,
+  title,
+  formattedDate,
+  onPress,
+}: {
+  sessionNumber: number;
+  title: string;
+  formattedDate: string;
+  onPress?: () => void;
+}) => {
+  const { animatedStyles, handlePressIn, handlePressOut } = useButtonTransition(
+    { default: Colors.primary[600], active: Colors.primary[500] }
+  );
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <StyledPressable
+        style={animatedStyles}
+        className={cn("py-12 px-8 rounded-[32px] flex space-y-2")}
+      >
+        <StyledText
+          className={cn("font-medium font-onest text-2xl text-white")}
+        >
+          {title}
+        </StyledText>
+        <StyledText className={cn("font-onest text-lg text-primary-200")}>
+          {formattedDate}
+        </StyledText>
+        <StyledText
+          className={cn(
+            "font-onest font-medium text-[198rem] tracking-[-16rem] translate-y-14 text-white absolute bottom-0 right-2 opacity-[0.12]"
+          )}
+        >
+          {sessionNumber}
+        </StyledText>
+      </StyledPressable>
+    </Pressable>
+  );
+};
+
+const StyledLinearGradient = styled(LinearGradient);
+
 export default function HomeScreen() {
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -90,10 +143,30 @@ export default function HomeScreen() {
     return "evening";
   };
 
+  const sessions = [
+    {
+      title: "Dealing with stress",
+      formattedDate: "Today",
+    },
+    {
+      title: "Finding meaning in work",
+      formattedDate: "Yesterday",
+    },
+    {
+      title: "Coping with anxiety",
+      formattedDate: "Last Tuesday",
+    },
+    {
+      title: "Thinking about work-life balance",
+      formattedDate: "Last Monday",
+    },
+  ];
+
   return (
     <SafeAreaView className="bg-white">
-      <View className="h-full w-full justify-center">
-        <View className="flex items-center px-8 pb-2">
+      <ScrollView className="h-full w-full px-8">
+        <View className="h-8" />
+        <View className="flex items-center -mb-24 -mt-32 h-screen justify-center">
           <Text className="text-primary-950 text-3xl font-onest text-center font-medium pb-12">
             How are you feeling this {getGreeting()}?
           </Text>
@@ -103,7 +176,27 @@ export default function HomeScreen() {
             }}
           />
         </View>
-      </View>
+        <View className="space-y-6 flex flex-col">
+          {sessions.map((session, index) => (
+            <View>
+              <SessionPreviewButton
+                key={index}
+                title={session.title}
+                formattedDate={session.formattedDate}
+                sessionNumber={sessions.length - index}
+              />
+            </View>
+          ))}
+        </View>
+
+        <View className="h-8" />
+      </ScrollView>
+      <StyledLinearGradient
+        colors={["rgba(255, 255, 255, 1)", "rgba(255, 255, 255, 0)"]}
+        start={[0, 1]} // Start at the bottom
+        end={[0, 0]} // End at the top
+        className="h-4 w-full absolute bottom-0"
+      />
     </SafeAreaView>
   );
 }
