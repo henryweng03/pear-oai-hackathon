@@ -27,8 +27,22 @@ wss.on('connection', (clientSocket) => {
     // Forward messages from client to OpenAI
     clientSocket.on('message', (message) => {
         if (openaiSocket.readyState === WebSocket.OPEN) {
-            console.log("Message from client to OpenAI:", message); // Log the message sent to OpenAI
-            openaiSocket.send(message);
+            try {
+                // Log and verify the message format before sending it to OpenAI
+                console.log("Raw message from client:", message);
+
+                // Parse the message to verify if it's valid JSON
+                const parsedMessage = JSON.parse(message);
+                console.log("Parsed message from client to OpenAI:", parsedMessage);
+
+                // Send the valid message to OpenAI
+                openaiSocket.send(JSON.stringify(parsedMessage));
+                console.log("Message sent to OpenAI:", JSON.stringify(parsedMessage));
+            } catch (error) {
+                console.error('Error parsing client message:', error);
+            }
+        } else {
+            console.log("OpenAI WebSocket is not ready.");
         }
     });
 
