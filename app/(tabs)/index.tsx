@@ -143,6 +143,25 @@ export default function HomeScreen() {
     return "evening";
   };
 
+  const sessions = [
+    {
+      title: "Dealing with stress",
+      formattedDate: "Today",
+    },
+    {
+      title: "Finding meaning in work",
+      formattedDate: "Yesterday",
+    },
+    {
+      title: "Coping with anxiety",
+      formattedDate: "Last Tuesday",
+    },
+    {
+      title: "Thinking about work-life balance",
+      formattedDate: "Last Monday",
+    },
+  ];
+
   return (
     <SafeAreaView className="bg-white">
       <ScrollView className="h-full w-full px-8">
@@ -158,34 +177,16 @@ export default function HomeScreen() {
           />
         </View>
         <View className="space-y-6 flex flex-col">
-          <View>
-            <SessionPreviewButton
-              title="Dealing with stress"
-              formattedDate="Today"
-              sessionNumber={4}
-            />
-          </View>
-          <View>
-            <SessionPreviewButton
-              title="Finding meaning in work"
-              formattedDate="Yesterday"
-              sessionNumber={3}
-            />
-          </View>
-          <View>
-            <SessionPreviewButton
-              title="Coping with anxiety"
-              formattedDate="Last Tuesday"
-              sessionNumber={2}
-            />
-          </View>
-          <View>
-            <SessionPreviewButton
-              title="Thinking about work-life balance"
-              formattedDate="Last Monday"
-              sessionNumber={1}
-            />
-          </View>
+          {sessions.map((session, index) => (
+            <View>
+              <SessionPreviewButton
+                key={index}
+                title={session.title}
+                formattedDate={session.formattedDate}
+                sessionNumber={sessions.length - index}
+              />
+            </View>
+          ))}
         </View>
 
         <View className="h-8" />
