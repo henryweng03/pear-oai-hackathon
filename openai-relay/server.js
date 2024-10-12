@@ -24,6 +24,10 @@ wss.on('connection', (clientSocket) => {
         },
     });
 
+    openaiSocket.on('open', () => {
+        
+    });
+
     // Forward messages from client to OpenAI
     clientSocket.on('message', (message) => {
         if (openaiSocket.readyState === WebSocket.OPEN) {
