@@ -51,7 +51,7 @@ const Button = ({
       case "lg":
         return "px-5 py-3 rounded-xl";
       case "fat":
-        return "px-8 py-4 rounded-xl";
+        return "px-8 py-5 rounded-xl";
       default:
         return "px-5 py-3 rounded-lg";
     }

@@ -4,6 +4,7 @@ import { styled } from "nativewind";
 import { cn } from "@/lib/utils";
 import Animated, { useSharedValue } from "react-native-reanimated";
 import { Colors } from "@/constants/Colors";
+import { ArrowUp, Hand } from "lucide-react-native";
 import { useButtonTransition } from "@/hooks/useButtonTransition";
 
 interface VoiceConversationActionButtonProps {
@@ -50,6 +51,12 @@ const VoiceConversationActionButton = ({
           disabled ? "opacity-50" : ""
         )}
       >
+        {variant === "send" ? (
+          <ArrowUp size={32} className="text-white" />
+        ) : (
+          <Hand size={32} className="text-primary-700" />
+        )}
+
         <StyledText
           className={cn(
             "font-medium font-onest text-center text-2xl",
