@@ -77,6 +77,7 @@ export default function ConversationScreen() {
           </IconButton>
           <IconButton
             onPress={() => {
+              stopStreamingRecording();
               router.replace("/post_session");
             }}
             variant="secondary"
