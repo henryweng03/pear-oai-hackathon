@@ -1,4 +1,6 @@
+import Button from "@/components/Button";
 import IconButton from "@/components/IconButton";
+import { useRouter } from "expo-router";
 import { Flag, X } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Text, View, SafeAreaView } from "react-native";
@@ -9,6 +11,8 @@ export type ConversationState =
   | "ai_responding";
 
 export default function PostSessionScreen() {
+  const router = useRouter();
+
   const greeting = "Great work, Henry! 🚀";
 
   const paragraphs = [
@@ -19,22 +23,35 @@ export default function PostSessionScreen() {
 
   return (
     <SafeAreaView className="bg-white">
-      <View className="w-full px-6 h-full">
-        <View className="flex flex-row-reverse">
-          <IconButton onPress={() => {}} variant="secondary">
-            <X size={20} className="text-primary-700" />
-          </IconButton>
+      <View className="w-full px-6 h-full justify-between">
+        <View>
+          <View className="flex flex-row-reverse">
+            <IconButton
+              onPress={() => {
+                router.replace("/");
+              }}
+              variant="secondary"
+            >
+              <X size={20} className="text-primary-700" />
+            </IconButton>
+          </View>
+          <Text className="text-3xl font-onest text-center font-medium mt-8">
+            {greeting}
+          </Text>
+          <View className="space-y-10 mt-14 px-2">
+            {paragraphs.map((paragraph, index) => (
+              <Text
+                key={index}
+                className="text-2xl text-primary-900 text-center"
+              >
+                {paragraph}
+              </Text>
+            ))}
+          </View>
         </View>
-        <Text className="text-3xl font-onest text-center font-medium mt-6">
-          {greeting}
-        </Text>
-        <View className="space-y-6 mt-8">
-          {paragraphs.map((paragraph, index) => (
-            <Text key={index} className="text-xl text-primary-900 text-center">
-              {paragraph}
-            </Text>
-          ))}
-        </View>
+        <Button size="fat" onPress={() => router.replace("/")}>
+          Return Home
+        </Button>
       </View>
     </SafeAreaView>
   );
