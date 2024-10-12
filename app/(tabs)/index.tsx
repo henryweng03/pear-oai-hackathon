@@ -30,7 +30,7 @@ export default function HomeScreen() {
   }, [conversationState]);
 
   return (
-    <SafeAreaView className="bg-secondary-50">
+    <SafeAreaView className="bg-white">
       <View className="w-full px-8 h-full">
         <View className="flex-grow flex flex-col justify-center mt-2">
           <Text className="text-3xl font-onest text-center font-medium">
