@@ -12,7 +12,6 @@ const wss = new WebSocket.Server({ server });
 // OpenAI WebSocket URL
 const OPENAI_WS_URL = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01';
 
-// Relay WebSocket Server
 wss.on('connection', (clientSocket) => {
     console.log('Client connected to relay server.');
 
@@ -26,45 +25,35 @@ wss.on('connection', (clientSocket) => {
 
     // Forward messages from client to OpenAI
     clientSocket.on('message', (message) => {
+        const sessionPrompt = JSON.parse(message);
+        console.log("Message from client to OpenAI:", sessionPrompt);  // Log the message sent to OpenAI
+
+        // Send to OpenAI if connection is open
         if (openaiSocket.readyState === WebSocket.OPEN) {
-            console.log("Message from client to OpenAI:", message); // Log the message sent to OpenAI
-            openaiSocket.send(message);
+            openaiSocket.send(JSON.stringify({
+                role: "user",
+                content: `Given this session data: ${JSON.stringify(sessionPrompt)}`
+            }));
         }
     });
 
     // Forward messages from OpenAI to client
     openaiSocket.on('message', (message) => {
-        if (Buffer.isBuffer(message)) {
-            // Convert the Buffer to a string and try to parse it as JSON
-            const decodedMessage = message.toString('utf-8');
-            try {
-                const jsonMessage = JSON.parse(decodedMessage);
-                console.log("Decoded message from OpenAI to client:", jsonMessage);
-                clientSocket.send(decodedMessage);  // Forward the decoded message to the client
-            } catch (error) {
-                console.log("Error parsing message from OpenAI:", decodedMessage);
-                clientSocket.send(decodedMessage);  // Forward the decoded message even if not JSON
-            }
-        } else {
-            console.log("Message from OpenAI to client:", message);
-            clientSocket.send(message);
-        }
+        console.log("Message from OpenAI:", message);
+        clientSocket.send(message);  // Send OpenAI response to Python client
     });
-    
 
-    // Handle OpenAI WebSocket errors
+    // Handle errors and disconnections
     openaiSocket.on('error', (error) => {
         console.error('OpenAI WebSocket error:', error);
         clientSocket.close();
     });
 
-    // Handle OpenAI WebSocket close
     openaiSocket.on('close', () => {
         console.log('OpenAI connection closed.');
         clientSocket.close();
     });
 
-    // Handle client disconnect
     clientSocket.on('close', () => {
         console.log('Client disconnected.');
         openaiSocket.close();
