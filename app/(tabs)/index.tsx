@@ -1,5 +1,6 @@
 import IconButton from "@/components/IconButton";
 import VoiceConversationActionButton from "@/components/VoiceConversationActionButton";
+import { useRouter } from "expo-router";
 import { Flag, X } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Text, View, SafeAreaView } from "react-native";
@@ -9,7 +10,8 @@ export type ConversationState =
   | "ai_processing"
   | "ai_responding";
 
-export default function HomeScreen() {
+export default function ConversationScreen() {
+  const router = useRouter();
   const [conversationState, setConversationState] =
     useState<ConversationState>("user_speaking");
 
@@ -38,7 +40,12 @@ export default function HomeScreen() {
           <IconButton onPress={() => {}} variant="secondary">
             <Flag size={20} className="text-primary-700" />
           </IconButton>
-          <IconButton onPress={() => {}} variant="secondary">
+          <IconButton
+            onPress={() => {
+              router.replace("/post_session");
+            }}
+            variant="secondary"
+          >
             <X size={20} className="text-primary-700" />
           </IconButton>
         </View>
