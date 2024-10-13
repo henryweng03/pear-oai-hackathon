@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { Flag, X } from "lucide-react-native";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { Text, View, SafeAreaView } from "react-native";
+import { useAudioResponsePlayer } from "@/hooks/useAudioResponsePlayer";
 
 // Utility function to encode ArrayBuffer to Base64
 const base64EncodeAudio = (arrayBuffer: ArrayBuffer) => {
@@ -19,21 +20,32 @@ const base64EncodeAudio = (arrayBuffer: ArrayBuffer) => {
   return btoa(binary);
 };
 
-// Utility function to play Base64-encoded audio directly in React Native
+// Utility function to convert Base64-encoded audio to a file and play it
 const playBase64Audio = async (base64Audio: string) => {
   try {
+    // Create a temporary file path
+    const filePath = `${FileSystem.cacheDirectory}temp_audio.wav`;
+
+    // Write the Base64 audio to the file
+    await FileSystem.writeAsStringAsync(filePath, base64Audio, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    // Play the audio file using the Audio API
     const { sound } = await Audio.Sound.createAsync(
-      { uri: `data:audio/wav;base64,${base64Audio}` },
+      { uri: filePath },
       { shouldPlay: true }
     );
+
     await sound.playAsync();
     sound.setOnPlaybackStatusUpdate((status) => {
       if (status.didJustFinish) {
         sound.unloadAsync(); // Unload the sound after it's finished
+        FileSystem.deleteAsync(filePath); // Clean up the file
       }
     });
   } catch (error) {
-    console.error("Error playing audio chunk:", error);
+    console.error('Error playing audio chunk:', error);
   }
 };
 
@@ -51,6 +63,15 @@ export default function ConversationScreen() {
   const audioQueueRef = useRef<Audio.Sound[]>([]);
   const currentSoundRef = useRef<Audio.Sound | null>(null);
   const statusRef = useRef<"idle" | "playing">("idle");
+  
+  // Set up audio player events (callbacks)
+  const audioEvents = {
+    onPlaybackStarted: () => console.log("Playback started"),
+    onPlaybackEnded: () => console.log("Playback ended"),
+    onPlaybackError: (error: Error) => console.error("Playback error", error),
+  };
+
+  const { enqueueAudioChunk, stopAudio } = useAudioResponsePlayer(audioEvents);
 
   const currentStateText =
     conversationState === "user_speaking"
@@ -89,7 +110,7 @@ export default function ConversationScreen() {
           if (response.type === "response.audio.delta") {
             const base64Audio = response.delta;
             console.log("Playing base64 audio delta:", base64Audio);
-            await playBase64Audio(base64Audio); // Play the audio directly
+            enqueueAudioChunk(base64Audio); // Play the audio directly
           }
 
           if (response.type === "session.created") {
@@ -105,12 +126,7 @@ export default function ConversationScreen() {
                   input_audio_transcription: {
                       model: "whisper-1",  // Only include the model, remove the 'enabled' field
                   },
-                  turn_detection: {
-                      type: "server_vad",
-                      threshold: 0.5,
-                      prefix_padding_ms: 300,
-                      silence_duration_ms: 200,
-                  },
+                  turn_detection: null,
                   temperature: 0.8,
               },
           };
@@ -135,76 +151,7 @@ export default function ConversationScreen() {
       wsRef.current = null;
     };
   };
-
-  // Function to play audio chunks
-  const enqueueAudioChunk = useCallback(
-    async (audioUrl: string) => {
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: audioUrl },
-          { shouldPlay: false }
-        );
-        audioQueueRef.current.push(sound);
-        console.log("Audio chunk added to queue");
-
-        if (statusRef.current === "idle") {
-          playNextChunk();
-        }
-      } catch (error) {
-        console.error("Error playing audio chunk:", error);
-      }
-    },
-    []
-  );
-
-  const playNextChunk = useCallback(async () => {
-    if (audioQueueRef.current.length > 0) {
-      statusRef.current = "playing";
-      const sound = audioQueueRef.current.shift()!;
-
-      try {
-        await sound.playAsync();
-        currentSoundRef.current = sound;
-
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.didJustFinish) {
-            sound.unloadAsync(); // Unload after playback
-            currentSoundRef.current = null;
-
-            if (audioQueueRef.current.length > 0) {
-              playNextChunk(); // Play next chunk if available
-            } else {
-              statusRef.current = "idle"; // Set idle if no more chunks
-            }
-          }
-        });
-      } catch (error) {
-        console.error("Error playing audio chunk:", error);
-        sound.unloadAsync(); // Ensure proper cleanup
-        statusRef.current = "idle";
-        if (audioQueueRef.current.length > 0) {
-          playNextChunk(); // Attempt to play next chunk if error occurred
-        }
-      }
-    } else {
-      statusRef.current = "idle"; // Set idle if queue is empty
-    }
-  }, []);
-
-  const stopAudio = useCallback(async () => {
-    statusRef.current = "idle";
-    if (currentSoundRef.current) {
-      await currentSoundRef.current.stopAsync();
-      await currentSoundRef.current.unloadAsync();
-      currentSoundRef.current = null;
-    }
-    // Clear the queue and unload all sounds
-    while (audioQueueRef.current.length > 0) {
-      const sound = audioQueueRef.current.pop();
-      if (sound) await sound.unloadAsync();
-    }
-  }, []);
-
+  
   // Stream audio recording setup
   const sendMessageToServer = useCallback((data: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -217,6 +164,32 @@ export default function ConversationScreen() {
       };
       wsRef.current.send(JSON.stringify(appendEvent));
       console.log("Sent audio chunk to server:", appendEvent);
+    } else {
+      console.error("WebSocket is not open.");
+    }
+  }, []);
+
+  const commitAudioToServer = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      // Send the commit message
+      const commitEvent = {
+        type: 'input_audio_buffer.commit',
+      };
+      wsRef.current.send(JSON.stringify(commitEvent));
+      console.log("Sent audio commit to server.");
+
+      // After committing, trigger the response
+      const responseEvent = {
+        type: 'response.create',
+        response: {
+          modalities: ['text', 'audio'],
+          instructions: "Please respond with audio and text.",
+          voice: 'alloy',
+          output_audio_format: 'pcm16',
+        }
+      };
+      wsRef.current.send(JSON.stringify(responseEvent));
+      console.log("Sent response request to server.");
     } else {
       console.error("WebSocket is not open.");
     }
@@ -239,6 +212,7 @@ export default function ConversationScreen() {
     } else {
       sendRemainingRecordingData();
       stopStreamingRecording();
+      commitAudioToServer();
     }
   }, [conversationState]);
 
