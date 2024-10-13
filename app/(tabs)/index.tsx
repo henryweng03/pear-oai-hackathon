@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { styled } from "nativewind";
 import { LinearGradient } from "expo-linear-gradient";
 import { useButtonTransition } from "@/hooks/useButtonTransition";
+import useWebSocket from "@/hooks/useWebSocket";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -143,6 +144,10 @@ export default function HomeScreen() {
     return "evening";
   };
 
+  const { isConnected, sendMessage, stringResponse } = useWebSocket(
+    "ws://localhost:8000/ws"
+  );
+
   const sessions = [
     {
       title: "Dealing with stress",
@@ -173,6 +178,7 @@ export default function HomeScreen() {
           <LetsChatButton
             onPress={() => {
               router.replace("/session");
+              sendMessage("start_session");
             }}
           />
         </View>

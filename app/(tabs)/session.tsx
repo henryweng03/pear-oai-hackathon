@@ -10,7 +10,7 @@ import { useAudioResponsePlayer } from "@/hooks/useAudioResponsePlayer";
 
 // Utility function to encode ArrayBuffer to Base64
 const base64EncodeAudio = (arrayBuffer: ArrayBuffer) => {
-  let binary = '';
+  let binary = "";
   const bytes = new Uint8Array(arrayBuffer);
   const chunkSize = 0x8000; // 32KB chunk size
   for (let i = 0; i < bytes.length; i += chunkSize) {
@@ -45,7 +45,7 @@ const playBase64Audio = async (base64Audio: string) => {
       }
     });
   } catch (error) {
-    console.error('Error playing audio chunk:', error);
+    console.error("Error playing audio chunk:", error);
   }
 };
 
@@ -63,7 +63,7 @@ export default function ConversationScreen() {
   const audioQueueRef = useRef<Audio.Sound[]>([]);
   const currentSoundRef = useRef<Audio.Sound | null>(null);
   const statusRef = useRef<"idle" | "playing">("idle");
-  
+
   // Set up audio player events (callbacks)
   const audioEvents = {
     onPlaybackStarted: () => console.log("Playback started"),
@@ -118,18 +118,19 @@ export default function ConversationScreen() {
             const sessionUpdate = {
               type: "session.update",
               session: {
-                  modalities: ["text", "audio"],
-                  instructions: "Your knowledge cutoff is 2023-10. You are a helpful, witty, and friendly AI.",
-                  voice: "alloy",
-                  input_audio_format: "pcm16",
-                  output_audio_format: "pcm16",
-                  input_audio_transcription: {
-                      model: "whisper-1",  // Only include the model, remove the 'enabled' field
-                  },
-                  turn_detection: null,
-                  temperature: 0.8,
+                modalities: ["text", "audio"],
+                instructions:
+                  "Your knowledge cutoff is 2023-10. You are a helpful, witty, and friendly AI.",
+                voice: "alloy",
+                input_audio_format: "pcm16",
+                output_audio_format: "pcm16",
+                input_audio_transcription: {
+                  model: "whisper-1", // Only include the model, remove the 'enabled' field
+                },
+                turn_detection: null,
+                temperature: 0.8,
               },
-          };
+            };
 
             websocket.send(JSON.stringify(sessionUpdate)); // Send the session update configuration
           }
@@ -151,42 +152,45 @@ export default function ConversationScreen() {
       wsRef.current = null;
     };
   };
-  
-  // Stream audio recording setup
-  const sendMessageToServer = useCallback((data: ArrayBuffer) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      const base64Audio = base64EncodeAudio(data);
 
-      // Send append message
-      const appendEvent = {
-        type: 'input_audio_buffer.append',
-        audio: base64Audio,
-      };
-      wsRef.current.send(JSON.stringify(appendEvent));
-      console.log("Sent audio chunk to server:", appendEvent);
-    } else {
-      console.error("WebSocket is not open.");
-    }
-  }, []);
+  // Stream audio recording setup
+  const sendAudioToServer = useCallback(
+    (data: ArrayBuffer) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        const base64Audio = base64EncodeAudio(data);
+
+        // Send append message
+        const appendEvent = {
+          type: "input_audio_buffer.append",
+          audio: base64Audio,
+        };
+        wsRef.current.send(JSON.stringify(appendEvent));
+        console.log("Sent audio chunk to server:", appendEvent);
+      } else {
+        console.error("WebSocket is not open.");
+      }
+    },
+    [wsRef.current]
+  );
 
   const commitAudioToServer = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       // Send the commit message
       const commitEvent = {
-        type: 'input_audio_buffer.commit',
+        type: "input_audio_buffer.commit",
       };
       wsRef.current.send(JSON.stringify(commitEvent));
       console.log("Sent audio commit to server.");
 
       // After committing, trigger the response
       const responseEvent = {
-        type: 'response.create',
+        type: "response.create",
         response: {
-          modalities: ['text', 'audio'],
+          modalities: ["text", "audio"],
           instructions: "Please respond with audio and text.",
-          voice: 'alloy',
-          output_audio_format: 'pcm16',
-        }
+          voice: "alloy",
+          output_audio_format: "pcm16",
+        },
       };
       wsRef.current.send(JSON.stringify(responseEvent));
       console.log("Sent response request to server.");
@@ -203,7 +207,7 @@ export default function ConversationScreen() {
     onRecordingStatusUpdate,
     streamIntervalMs: 300,
     updateIntervalMs: 24,
-    sendMessage: (data: ArrayBuffer) => sendMessageToServer(data), // called every 24 ms
+    sendMessage: (data: ArrayBuffer) => sendAudioToServer(data), // called every 24 ms
   });
 
   useEffect(() => {
